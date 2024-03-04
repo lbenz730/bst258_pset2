@@ -95,8 +95,7 @@ $$
 
 which also only requires positivity of weights.
 
-Conditional exchangeability implies that within strata of $L$, treatment assigment is random. This would then imply that $\mathbb{E}_{pp}[Y^a] = \mathbb{E}[Y^a]$, that is, the mean counterfactual outcomes are the same in the pseudo and original populations, and that $\mathbb{E}[Y^a] = \mathbb{E}_{pp}[Y~|A = a]$. To see this, check out the next question 1.1.2. Furthermore, it implies that $Y^{a} \indep A$ marginally in the psuedo-population. The gist of it is the HW asked for are true for whatever $L$ you adjust for even if it’s not all the confounders. But if L is ALL the confounders, then the causal quantities we care about are the same in the re-weighted population and the original population, and we can estimate them in the re-weighted population without caring about $L$ anymore
-
+Conditional exchangeability implies that within strata of $L$, treatment assigment is random. This would then imply that $\mathbb{E}_{pp}[Y^a] = \mathbb{E}[Y^a]$, that is, the mean counterfactual outcomes are the same in the pseudo and original populations, and that $\mathbb{E}[Y^a] = \mathbb{E}_{pp}[Y~|A = a]$. To see this, check out the next question 1.1.2. Furthermore, it implies that $Y^{a} \indep A$ marginally in the psuedo-population. The gist of it is the HW asked for are true for whatever $L$ you adjust for even if it’s not all the confounders. But if L is ALL the confounders, then the causal quantities we care about are the same in the re-weighted population and the original population, and we can estimate them in the re-weighted population without caring about $L$ anymore.
 :::
 
 ### 1.1.2)
