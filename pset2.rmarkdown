@@ -53,6 +53,7 @@ theme_set(theme_bw() +
                   legend.position = "bottom"))
 ```
 
+
 :::{.callout-note title="GitHub URL"}
 Please find my GitHub repository at https://github.com/lbenz730/bst258_pset2
 :::
@@ -119,6 +120,7 @@ $$
 ## Part 2: Application
 ### 1.2.1: IPW Estimation
 
+
 ```{r}
 ### Copy Nima's code to get the data
 library(fastverse)
@@ -141,7 +143,9 @@ download.file(data_urls[[4]], "data/nhefs.csv")
 ```
 
 
+
 #### a)
+
 
 ```{r}
 ### Load in data and filter down to the variables we care about
@@ -191,11 +195,13 @@ ggplot(df_weights, aes(x = weight)) +
 
 ```
 
+
 :::{.callout-note title="Answer"}
 We see from the distributions above a few interesting differences between the standard IP weights and their stabilized version. To begin with, there is much less variance in the stablized IPW -- that is, stabilization is a variance reduction tactic. The maximum weight among unstablized patients is over 15 compared to about 4 for the stablized IPW, suggesting that outliers will have less of an influence. Finally, IP weights are stricyly great than 1 while stablized weights can be < 1, though they are concentrated on 1. 
 :::
 
 #### b) 
+
 
 ```{r}
 ### Add in Weights to Dataset
@@ -224,16 +230,20 @@ df_ate <-
                                summary(sipw)$coefficients[2, 'Std. Error']))
 ```
 
+
 :::{.callout-note title="Answer"}
+
 ```{r}
 #| echo: false
 df_ate
 ```
+
 :::
 
 #### c)
 :::{.callout-note title="Answer"}
 Note that in part b), we simply took the standard error from the saturated linear model used to estimate $\psi$. This is labeled as naive standard error because it doesn't account for the weights. Two proper ways to compute the variance of the ATE are to do bootstrapping, or to use something like GEE to compute robust standard errors. Yet another way is use an analytical formula based on the asymptotic normal distribution but the form of such a variance estimator would change depending on the structure of the weights. For the purposes of this problem, I will appeal to the GEE approach to correct the naive standard errors from above.
+
 
 ```{r}
 ### Fit GEE w/ working indendence
@@ -263,6 +273,7 @@ df_ate <-
 df_ate
 
 ```
+
 :::
 
 
@@ -273,6 +284,7 @@ We see that both the IPW and Stabilized IPW produce exactly the same point estim
 
 ### 1.2.2: Doubly Robust Estimation
 #### a) 
+
 ```{r}
 ### Fit Outcome Regression
 outcome_model <- 
@@ -288,7 +300,9 @@ mhat_0 <- predict(outcome_model, newdata = mutate(df_nhefs, qsmk = 0))
 mhat_A <- outcome_model$fitted.values
 ```
 
+
 #### b) 
+
 ```{r}
 ### Compute DR Estimator
 A <- df_nhefs$qsmk
@@ -303,16 +317,21 @@ psi_DR <-
 psi_DR
 ```
 
+
 :::{.callout-note title="Answer"}
 $\hat\psi_n^{DR} = 3.46$ which is similar to $\hat\psi_n^{IPW} = 3.44$ (using both stable and stabilized weights)
 :::
 
 
+
 {{< pagebreak >}}
+
+
 
 #### c)
 
 Even though we already used GEE for the variance of $\hat\psi^{IPW}_n$, I will opt for bootstrapping the variance for both estimators here in order to get an apples to apples comparison. The bootstrap should yield valid variance estimates provided that samples are independent from one another and $B$, the number of bootstrap replicated is sufficiently large. In the below, I will use $B = 10,000$ replicates.
+
 
 ```{r}
 ### Function to do 1 boostrap replicate for ate
@@ -391,11 +410,14 @@ df_summary <-
   mutate('conf_interval' = paste0('(', sprintf('%0.3f', ate - qnorm(0.975) * std_error), ', ', 
                                   sprintf('%0.3f', ate + qnorm(0.975) * std_error), ')'))
 ```
+
 :::{.callout-note title="Answer"}
+
 ```{r}
 #| echo: false
 df_summary
 ```
+
 We see that the variance of the doubly-robust is slightly smaller than that of the IPW estimator.
 :::
 
@@ -439,6 +461,7 @@ Now, there could be some cases when we might prefer the plug in estimator over t
 ### 2.2.1
 #### a)
 
+
 ```{r}
 ### Fit outcome model
 outcome_model <- 
@@ -455,6 +478,7 @@ psi_PI <- mean(mhat_1 - mhat_0)
 
 psi_PI
 ```
+
 :::{.callout-note title="Answer"}
 
 #### b) 
@@ -478,6 +502,7 @@ Doubly robust refers to the property that $\hat\psi_n^{DR} \to \psi$ if either t
 :::
 
 #### b) 
+
 
 ```{r}
 ### Fit Logistic Regression for Propensity Score Model
@@ -520,7 +545,9 @@ std_err <- sqrt(var(f1 -f0)/nrow(df_nhefs))
 ```
 
 
+
 :::{.callout-note title="Answer"}
+
 ```{r}
 #| echo: FALSE
 tibble('psi_DR' = psi_DR,
@@ -529,6 +556,7 @@ tibble('psi_DR' = psi_DR,
                                   sprintf('%0.3f', psi_DR + qnorm(0.975) * std_error), ')'))
   
 ```
+
 
 We see that we get a similar standard error using the analytical formula in Nima's notes, but very slightly smaller than the bootstrapped variance in the previous problem. 
 :::
@@ -542,4 +570,5 @@ We see that we get a similar standard error using the analytical formula in Nima
 
 ::: {#refs}
 :::
+
 
