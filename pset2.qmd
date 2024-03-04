@@ -95,6 +95,8 @@ $$
 
 which also only requires positivity of weights.
 
+Conditional exchangeability implies that within strata of $L$, treatment assigment is random. This would then imply that $\mathbb{E}_{pp}[Y^a] = \mathbb{E}[Y^a]$, that is, the mean counterfactual outcomes are the same in the pseudo and original populations, and that $\mathbb{E}[Y^a] = \mathbb{E}_{pp}[Y~|A = a]$. To see this, check out the next question 1.1.2. Furthermore, it implies that $Y^{a} \indep A$ marginally in the psuedo-population, 
+
 :::
 
 ### 1.1.2)
@@ -453,6 +455,7 @@ psi_PI <- mean(mhat_1 - mhat_0)
 
 psi_PI
 ```
+:::{.callout-note title="Answer"}
 
 #### b) 
 :::{.callout-note title="Answer"}
