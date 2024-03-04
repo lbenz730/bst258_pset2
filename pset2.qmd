@@ -1,0 +1,542 @@
+---
+title: "Problem Set #2"
+subtitle: "BST 258: Causal Inference -- Theory and Practice"
+author: "Luke Benz"
+date: "`r Sys.Date()`"
+execute:
+  message: false
+  warning: false
+include-in-header: 
+  preamble.Tex
+format:
+  pdf:
+    documentclass: scrartcl
+    papersize: letter
+    fontsize: 11pt
+    geometry:
+      - margin=1in
+      - heightrounded
+    number-sections: false
+    colorlinks: true
+    link-citations: true
+    callout-appearance: simple
+    callout-icon: false
+    # figure options
+    fig-width: 8
+    fig-height: 4.5
+    fig-cap-location: bottom
+    # code block options
+    code-line-numbers: false
+    code-block-bg: false
+    highlight-style: gruvbox
+bibliography: "`r here::here('refs.bib')`"
+---
+
+```{r}
+#| echo: false
+#| message: false
+#| label: global-setup
+# NOTE: The immediately following line loads an renv environment located at the
+#       nearest "top-level" directory, as marked by a `.here` file, which is
+#       located by the here::here() function. This would be a useful tool if,
+#       say, this template.qmd file was not located at the top-level directory.
+#       Here, renv should activate automatically when this file is opened.
+#renv::load(here::here())
+library(here)
+library(tidyverse)
+theme_set(theme_bw() +
+            theme(plot.title = element_text(hjust = 0.5, size = 24),
+                  plot.subtitle = element_text(hjust = 0.5, size = 18),
+                  axis.title = element_text(size = 20),
+                  strip.text = element_text(size = 14),
+                  plot.caption = element_text(size = 10),
+                  legend.position = "bottom"))
+```
+
+:::{.callout-note title="GitHub URL"}
+Please find my GitHub repository at https://github.com/lbenz730/bst258_pset2
+:::
+
+# Question 1
+## Part 1: Theory
+### 1.1.1) 
+:::{.callout-note title="Answer"}
+The aforementioned two properties are validated under the positivity property. Let $\mathbb{E}_{pp}[Y~|~A = a]$ be the conditional mean in the pseudo-population. We have that 
+
+$$
+\begin{aligned}
+\mathbb{E}_{pp}[Y~|A = a] &=  \frac{\mathbb{E}_{pp}[Y\mathbbm{1}(A = a)]}{\mathbb{E}_{pp}[\mathbbm{1}(A = a)]} \\
+&=\frac{\mathbb{E}\biggr[\frac{Y\mathbbm{1}(A = a)}{P[A=a~|~L]}\biggr]}{\mathbb{E}\biggr[\frac{\mathbbm{1}(A = a)}{P[A=a~|~L]}\biggr]} \\
+\end{aligned}
+$$
+
+We have that 
+$$\mathbb{E}\biggr[\frac{\mathbbm{1}(A = a)}{P[A=a~|L]}\biggr] = \mathbb{E}\biggr[\mathbb{E}\biggr[\frac{\mathbbm{1}(A = a)}{P[A=a~|L]}\bigg|L\biggr]\biggr] = 1
+$$
+
+so the above fraction simplifies to $\mathbb{E}\biggr[\frac{Y\mathbbm{1}(A = a)}{P[A=a~|L]}\biggr]$. Now we have that 
+
+$$
+\begin{aligned}
+\mathbb{E}\biggr[\frac{Y\mathbbm{1}(A = a)}{P[A=a~|~L]}\biggr] &= \sum_{\ell}\frac{\mathbb{E}[Y~|A = a, L = \ell]}{P(A = a~|~L)}Pr(A = a, L = \ell) \\ 
+&= \sum_{\ell}\frac{\mathbb{E}[Y~|A = a, L = \ell]}{P(A = a~|~L)}Pr(A = a ~|~ L = \ell)Pr(L = \ell) \\
+&=\sum_{\ell}\mathbb{E}[Y~|A = a, L = \ell]Pr(L = \ell)
+\end{aligned}
+$$
+That is, the standardized mean from the original population equals the pseudo-population unadjusted mean, and all that was required was the positivity property for the weights to ensure everything above is well defined.
+
+Similarly, to show that $A \indep L$ in the pseudo-population we have that 
+
+$$
+\begin{aligned}
+P_{pp}(A = a~|~L) = \mathbb{E}_{pp}(\mathbbm{1}(A = a)~|~L) = \mathbb{E}\biggr[\frac{\mathbbm{1}(A = a~|L)}{P(A = a~|~L)}\biggr] = \frac{P(A = a)}{P(A = a~|~L)} = P_{pp}(A = a)
+\end{aligned}
+$$
+
+which also only requires positivity of weights.
+
+:::
+
+### 1.1.2)
+:::{.callout-note title="Answer"}
+
+$$
+\begin{aligned}
+\mathbb{E}\biggr[\frac{\mathbbm{1}(A = a)Y}{P(A = a~|~L)}\biggr] &= \mathbb{E}\biggr[\mathbb{E}\biggr[\frac{\mathbbm{1}(A = a)Y}{P(A = a~|~L)}~\biggr|~L\biggr]\biggr]~~~~\text{(Iterated Expectations/Positivity)} \\
+&= \mathbb{E}\biggr[\frac{1}{P(A = a~|~L)}\mathbb{E}[\mathbbm{1}(A = a)Y~|~L]\biggr] \\
+&= \mathbb{E}\biggr[\frac{1}{P(A = a~|~L)}\mathbb{E}[Y~|~A = a, L]P(A = a ~|~L)\biggr]~~~~\text{(Conditional Expectation Rules)} \\
+&= \mathbb{E}\biggr[\mathbb{E}[Y~|~A = a, L]\biggr] \\ 
+&= \mathbb{E}\biggr[\mathbb{E}[Y^a~|~A = a, L]\biggr]~~~~\text{(Consistency)} \\ 
+&= \mathbb{E}\biggr[\mathbb{E}[Y^a~|~ L]\biggr]~~~~\text{(Conditional Exchangability)} \\ 
+&= \mathbb{E}[Y^a]~~~~\text{(Iterated Expectation)} \\
+\end{aligned}
+$$
+
+:::
+
+## Part 2: Application
+### 1.2.1: IPW Estimation
+
+```{r}
+### Copy Nima's code to get the data
+library(fastverse)
+library(readxl)
+library(stringr)
+# create URLs for downloading NHEFS data
+url_trunks <- c("2012/10/nhefs_sas.zip", "2012/10/nhefs_stata.zip",
+                "2017/01/nhefs_excel.zip", "1268/20/nhefs.csv")
+url_stub <- "https://cdn1.sph.harvard.edu/wp-content/uploads/sites/1268/" 
+data_urls <- lapply(url_trunks, function(url_trunk) {
+  paste0(url_stub, url_trunk)
+})
+# download and unzip files
+temp <- tempfile()
+for (i in seq_len(sum(str_count(url_trunks, "zip")))) {
+  download.file(data_urls[[i]], temp)
+  unzip(temp, exdir = "data")
+}
+download.file(data_urls[[4]], "data/nhefs.csv")
+```
+
+
+#### a)
+
+```{r}
+### Load in data and filter down to the variables we care about
+### Also, recode certain variables as factors
+library(tidyverse)
+df_nhefs <- read_csv('data/nhefs.csv')
+df_nhefs <-
+  df_nhefs %>% 
+  filter(!is.na(wt82_71)) %>% 
+  select(seqn, wt82_71, qsmk, sex, age, race, education, 
+         smokeintensity, smokeyrs, wt71, exercise, active) %>% 
+  mutate_at(c('education', 'active', 'exercise'), as.factor)
+
+### Fit Logistic Regression for Propensity Score Model
+propensity_model <- 
+  glm(qsmk ~ sex + race + education + exercise + active + 
+        age + wt71 + smokeintensity + smokeyrs + 
+        I(age^2) + I(wt71^2) + I(smokeintensity^2) + I(smokeyrs^2),
+      data = df_nhefs,
+      family = 'binomial')
+
+### Compute Weights 
+# Standard Weights
+W <- 
+  ifelse(df_nhefs$qsmk == 1, 
+         1/propensity_model$fitted.values, 
+         1/(1-propensity_model$fitted.values))
+
+# Stable Weights
+SW <- 
+  ifelse(df_nhefs$qsmk == 1, 
+         mean(df_nhefs$qsmk)/propensity_model$fitted.values, 
+         mean(1-df_nhefs$qsmk)/(1-propensity_model$fitted.values))
+
+
+### Make Plot
+df_weights <- 
+  tibble('weight' = c(W, SW),
+         'stable' = rep(c('IPW', 'Stabilized IPW'), each = length(W)))
+
+ggplot(df_weights, aes(x = weight)) + 
+  facet_wrap(~stable, scales = 'free') + 
+  geom_histogram(color = 'black', fill = 'orange') + 
+  labs(x = 'Weight', 
+       y = 'Frequency',
+       title = 'Distribution of Inverse Probability Weights')
+
+```
+
+:::{.callout-note title="Answer"}
+We see from the distributions above a few interesting differences between the standard IP weights and their stabilized version. To begin with, there is much less variance in the stablized IPW -- that is, stabilization is a variance reduction tactic. The maximum weight among unstablized patients is over 15 compared to about 4 for the stablized IPW, suggesting that outliers will have less of an influence. Finally, IP weights are stricyly great than 1 while stablized weights can be < 1, though they are concentrated on 1. 
+:::
+
+#### b) 
+
+```{r}
+### Add in Weights to Dataset
+df_nhefs <- 
+  df_nhefs %>% 
+  mutate('weight' = W,
+         'stable_weight' = SW)
+
+### IP Weighted Estimator
+ipw <- 
+  lm(wt82_71 ~ qsmk, 
+     weights = weight, 
+     data = df_nhefs)
+
+### Stablized IP Estimator
+sipw <- 
+  lm(wt82_71 ~ qsmk, 
+     weights = stable_weight, 
+     data = df_nhefs)
+
+### Report estimates
+df_ate <- 
+  tibble('estimator' = c('IPW', 'Stabilized IPW'),
+         'ate' = c(ipw$coefficients['qsmk'], sipw$coefficients['qsmk']),
+         'std_error_naive' = c(summary(ipw)$coefficients[2, 'Std. Error'],
+                               summary(sipw)$coefficients[2, 'Std. Error']))
+```
+
+:::{.callout-note title="Answer"}
+```{r}
+#| echo: false
+df_ate
+```
+:::
+
+#### c)
+:::{.callout-note title="Answer"}
+Note that in part b), we simply took the standard error from the saturated linear model used to estimate $\psi$. This is labeled as naive standard error because it doesn't account for the weights. Two proper ways to compute the variance of the ATE are to do bootstrapping, or to use something like GEE to compute robust standard errors. Yet another way is use an analytical formula based on the asymptotic normal distribution but the form of such a variance estimator would change depending on the structure of the weights. For the purposes of this problem, I will appeal to the GEE approach to correct the naive standard errors from above.
+
+```{r}
+### Fit GEE w/ working indendence
+library(geepack)
+gee_ipw <- 
+  geeglm(wt82_71 ~ qsmk, 
+         data = df_nhefs, 
+         weights = weight, 
+         id = seqn,
+         corstr = "independence")
+
+gee_sipw <- 
+  geeglm(wt82_71 ~ qsmk, 
+         data = df_nhefs, 
+         weights = stable_weight, 
+         id = seqn,
+         corstr = "independence")
+
+### Add in robust standard errors and CI
+df_ate <-
+  df_ate %>% 
+  bind_cols(tibble('std_error' = c(summary(gee_ipw)$coefficients[2, 'Std.err'],
+                                   summary(gee_sipw)$coefficients[2, 'Std.err']))) %>% 
+  mutate('conf_interval' = paste0('(', sprintf('%0.2f', ate - qnorm(0.975) * std_error), ', ', 
+                                  sprintf('%0.2f', ate + qnorm(0.975) * std_error), ')'))
+
+df_ate
+
+```
+:::
+
+
+#### d) 
+:::{.callout-note title="Answer"}
+We see that both the IPW and Stabilized IPW produce exactly the same point estimates for the ATE. Furthermore, after accounting for the weights via a robust variance estimator, we see they produce the same confidence intervals as well. As mentioned in @hernan2023causal however, we only will see the superiority of the stabilized weights (in terms of reducing the variance of $\hat\psi$) when we aren't in a situation where we are estimating a saturated model.
+:::
+
+### 1.2.2: Doubly Robust Estimation
+#### a) 
+```{r}
+### Fit Outcome Regression
+outcome_model <- 
+  lm(wt82_71 ~ qsmk + sex + race + education + exercise + active + 
+       age + wt71 + smokeintensity + smokeyrs + 
+       I(age^2) + I(wt71^2) + I(smokeintensity^2) + I(smokeyrs^2) + 
+       qsmk * smokeintensity,
+     data = df_nhefs)
+
+### Get m-hat 1 and m-hat 0 by setting treatment to 1 or 0
+mhat_1 <- predict(outcome_model, newdata = mutate(df_nhefs, qsmk = 1))
+mhat_0 <- predict(outcome_model, newdata = mutate(df_nhefs, qsmk = 0))
+mhat_A <- outcome_model$fitted.values
+```
+
+#### b) 
+```{r}
+### Compute DR Estimator
+A <- df_nhefs$qsmk
+Y <- df_nhefs$wt82_71
+prop_score <- propensity_model$fitted.values
+
+psi_DR <- 
+  mean(( A/prop_score - (1-A)/(1 - prop_score) ) * (Y - mhat_A) + 
+         (mhat_1 - mhat_0) )
+
+### Print DR estimator
+psi_DR
+```
+
+:::{.callout-note title="Answer"}
+$\hat\psi_n^{DR} = 3.46$ which is similar to $\hat\psi_n^{IPW} = 3.44$ (using both stable and stabilized weights)
+:::
+
+
+{{< pagebreak >}}
+
+#### c)
+
+Even though we already used GEE for the variance of $\hat\psi^{IPW}_n$, I will opt for bootstrapping the variance for both estimators here in order to get an apples to apples comparison. The bootstrap should yield valid variance estimates provided that samples are independent from one another and $B$, the number of bootstrap replicated is sufficiently large. In the below, I will use $B = 10,000$ replicates.
+
+```{r}
+### Function to do 1 boostrap replicate for ate
+resample_ate <- function(df_nhefs) {
+  ### Sample Dataset
+  ix <- sample(1:nrow(df_nhefs), size = nrow(df_nhefs), replace = T)
+  df_tmp <- df_nhefs[ix,]
+  
+  ### Fit Logistic Regression for Propensity Score Model
+  propensity_model <- 
+    glm(qsmk ~ sex + race + education + exercise + active + 
+          age + wt71 + smokeintensity + smokeyrs + 
+          I(age^2) + I(wt71^2) + I(smokeintensity^2) + I(smokeyrs^2),
+        data = df_tmp,
+        family = 'binomial')
+  
+  ### Fit Outcome Regression
+  outcome_model <- 
+    lm(wt82_71 ~ qsmk + sex + race + education + exercise + active + 
+         age + wt71 + smokeintensity + smokeyrs + 
+         I(age^2) + I(wt71^2) + I(smokeintensity^2) + I(smokeyrs^2) + 
+         qsmk * smokeintensity,
+       data = df_tmp)
+  
+  W <- 
+    ifelse(df_tmp$qsmk == 1, 
+           1/propensity_model$fitted.values, 
+           1/(1-propensity_model$fitted.values))
+  
+  ### Get m-hat 1 and m-hat 0 by setting treatment to 1 or 0
+  mhat_1 <- predict(outcome_model, newdata = mutate(df_tmp, qsmk = 1))
+  mhat_0 <- predict(outcome_model, newdata = mutate(df_tmp, qsmk = 0))
+  mhat_A <- outcome_model$fitted.values
+  
+  ### Compute estimators
+  A <- df_tmp$qsmk
+  Y <- df_tmp$wt82_71
+  prop_score <- propensity_model$fitted.values
+  psi_DR <- 
+    mean(( A/prop_score - (1-A)/(1 - prop_score) ) * (Y - mhat_A) + 
+           (mhat_1 - mhat_0) )
+  psi_ipw <- 
+    lm(wt82_71 ~ qsmk, 
+       weights = W, 
+       data = df_tmp)$coefficients['qsmk']
+  
+  
+  return(tibble('ate' = c(psi_DR, psi_ipw),
+                'method' = c('DR', 'IPW')))
+}
+
+### Function to do boostrapping
+bootstrap_ate <- function(df_nhefs, B) {
+  df_boot <- 
+    future_map_dfr(1:B, ~resample_ate(df_nhefs), 
+                   .options = furrr_options(seed = 192))
+  df_results <- 
+    df_boot %>% 
+    group_by(method) %>% 
+    summarise('std_error' = sd(ate))
+  
+  return(df_results)
+}
+
+
+
+### Do boostrapping
+library(furrr)
+plan(multisession(workers = 12))
+df_boot <- bootstrap_ate(df_nhefs, B = 10000)
+
+df_summary <- 
+  tibble('method' = c('IPW', 'DR'),
+         'ate' = c(df_ate$ate[1], psi_DR)) %>% 
+  inner_join(df_boot, by = 'method') %>% 
+  mutate('conf_interval' = paste0('(', sprintf('%0.3f', ate - qnorm(0.975) * std_error), ', ', 
+                                  sprintf('%0.3f', ate + qnorm(0.975) * std_error), ')'))
+```
+:::{.callout-note title="Answer"}
+```{r}
+#| echo: false
+df_summary
+```
+We see that the variance of the doubly-robust is slightly smaller than that of the IPW estimator.
+:::
+
+# Question 2
+## Part 1: Theory
+### 2.1.1
+:::{.callout-note title="Answer"}
+$$
+\begin{aligned}
+\mathbb{E}\biggr[\frac{Y\mathbbm{1}(A = a, C = 0)}{P[A=a, C = 0~|~L]}\biggr] &= \sum_{\ell}\frac{\mathbb{E}[Y~|A = a, C = 0, L = \ell]}{P(A = a, C = 0~|~L)}Pr(A = a,  C = 0, L = \ell) \\
+&= \sum_{\ell}\frac{\mathbb{E}[Y~|A = a, C = 0, L = \ell]}{P(A = a, C = 0~|~L)}Pr(A = a, C = 0 ~|~ L = \ell)Pr(L = \ell) \\
+&=\sum_{\ell}\mathbb{E}[Y~|A = a, C = 0, L = \ell]Pr(L = \ell)
+\end{aligned}
+$$
+:::
+
+### 2.1.2
+:::{.callout-note title="Answer"}
+$$
+\begin{aligned}
+\sum_{\ell}\mathbb{E}[Y~|~A = a, C = 0, L = \ell]Pr(L = \ell) &= \mathbb{E}\biggr[\mathbb{E}[Y~|A = a, C = 0, L = \ell]\biggr] \\
+&= \mathbb{E}\biggr[\mathbb{E}[Y^{a}~|~A = a, C = 0, L = \ell]\biggr]~~~\text{(Consitency)} \\
+&= \mathbb{E}\biggr[\mathbb{E}[Y^{a}~|~C = 0, L = \ell]\biggr]~~~\text{(Conditional Exchangability} 
+\\
+&~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\text{+ Positivity)} \\
+&= \mathbb{E}[Y^{a}~|~C = 0]~~~\text{Itterated expectation} \\
+\end{aligned}
+$$
+
+Thus, the standardized mean is equal to the mean counterfactual, among the uncensored. To get rid of the censoring we'd need an additional non-informative censoring assumption.
+:::
+
+### 2.1.3
+:::{.callout-note title="Answer"}
+When the outcome regression is correctly specified, it does seem like the doubly-robust estimator doesn't gain much on the standardization (plug-in) estimator. However, in practice we probably aren't going to specify the outcome model correctly. Thus, if we are not confident in specifying the outcome model correctly, weight might prefer the doubly robust estimator, particularly if we feel that we can model the propensity score better than the outcome model. If we do get the outcome model incorrect, then the plug in estimator will be biased, while the doubly robust estimator still has a chance to be unbiased (consistent) if the propensity score is correct. On the other hand, if we do get the outcome model correct, we can achieve better efficiency if we also get the propensity score correct. Thus, we might prefer the DR estimator if we know little about both models or more about the propensity score model than about the outcome model.
+
+Now, there could be some cases when we might prefer the plug in estimator over the doubly robust estimator. One concern with the doubly robust estimator is that propensity scores could be very very close to 0 or 1 (near positivity violations), which could introduce finite sample bias due to one or two data points getting out sized influence. Thus, if near positivity violations are a worry, the plug-in might be a concern. Alternatively, we might prefer the plug-in if for some reason we had oracle knowledge of the outcome model but didn't understand the treatment mechanism very well. More practically, another annoyance of the doubly robust estimator is the need to compute two models as opposed to 1. For this smoking example this isn't a concern but in my own research, for example, I work on datasets with over 40 million observations so fitting each model, particularly those with a larger number of covariates, can be computationally more difficult, though substantially easier today than when these estimators were first developed.
+:::
+
+## Part 2: Application
+### 2.2.1
+#### a)
+
+```{r}
+### Fit outcome model
+outcome_model <- 
+  lm(wt82_71 ~ qsmk + sex + race + education + exercise + active + 
+       age + wt71 + smokeintensity + smokeyrs + 
+       I(age^2) + I(wt71^2) + I(smokeintensity^2) + I(smokeyrs^2) + 
+       qsmk * smokeintensity,
+     data = df_nhefs)
+
+### Compute Plug in
+mhat_1 <- predict(outcome_model, newdata = mutate(df_nhefs, qsmk = 1))
+mhat_0 <- predict(outcome_model, newdata = mutate(df_nhefs, qsmk = 0))
+psi_PI <- mean(mhat_1 - mhat_0)
+
+psi_PI
+```
+
+#### b) 
+:::{.callout-note title="Answer"}
+We see above that $\hat\psi^{PI}_n = 3.52$, which is close to $\hat\psi^{IPW}_n = 3.44$ but not exactly the same. One notable difference between the standardization and the IPW approach is that the standardization approach modeled the outcome directly, while the IPW mechanism didn't utilize any modeling of the outcome, instead choosing to model the treatment. If we think of a standard DAG for confounding, modeling the treatment, modeling the propensity score removes confounding by removing the $L \to A$ arrow, while outcome regression (standardization) removes the $L \to Y$ arrow.
+
+On the other hand, both approaches utilized similar principles of maintaining some flexibility (with quadratic terms, interactions etc.). Both methods are a comparison of means within certain strata. In IPW, the "strata" are a the treatments arms of a weighted psuedo-population where treatment is independnt of covariates. In standardization, the strata are levels of confounders. 
+
+In summary, while IPW and standardization target the same estimand and are equivalent in expectation, they have different philosophical approaches on arriving at their respective estimates.
+:::
+
+#### c) 
+:::{.callout-note title="Answer"}
+The equivalence between the IPW estimator and the standardization estimator is an equivalence of expectation. In finite samples, however, as was the case in this example, they may not give exactly the same estimate, but the two estimates should likely be close to one another. The reason these estimates are different is likely due to the fact the propensity score model and outcome model probably will have some finite sample bias, perhaps in different directions. Moreover, it's possible that certain strata are uncommon which, in a small sample, can have big influence on the IPW estimator.
+:::
+
+### 2.2.2
+#### a) 
+:::{.callout-note title="Answer"}
+Doubly robust refers to the property that $\hat\psi_n^{DR} \to \psi$ if either the propensity score OR the outcome model is correctly specified. That is, it's robust to misspecification of either one (but not both) of the component nuisance functions.
+:::
+
+#### b) 
+
+```{r}
+### Fit Logistic Regression for Propensity Score Model
+  propensity_model <- 
+    glm(qsmk ~ sex + race + education + exercise + active + 
+          age + wt71 + smokeintensity + smokeyrs + 
+          I(age^2) + I(wt71^2) + I(smokeintensity^2) + I(smokeyrs^2),
+        data = df_nhefs,
+        family = 'binomial')
+
+### Fit outcome model
+outcome_model <- 
+  lm(wt82_71 ~ qsmk + sex + race + education + exercise + active + 
+       age + wt71 + smokeintensity + smokeyrs + 
+       I(age^2) + I(wt71^2) + I(smokeintensity^2) + I(smokeyrs^2) + 
+       qsmk * smokeintensity,
+     data = df_nhefs)
+
+### Get m-hat 1 and m-hat 0 by setting treatment to 1 or 0
+mhat_1 <- predict(outcome_model, newdata = mutate(df_nhefs, qsmk = 1))
+mhat_0 <- predict(outcome_model, newdata = mutate(df_nhefs, qsmk = 0))
+mhat_A <- outcome_model$fitted.values
+
+### Compute DR Estimator
+A <- df_nhefs$qsmk
+Y <- df_nhefs$wt82_71
+prop_score <- propensity_model$fitted.values
+
+psi_DR <- 
+  mean(( A/prop_score - (1-A)/(1 - prop_score) ) * (Y - mhat_A) + 
+         (mhat_1 - mhat_0) )
+
+### Variance using Nima's Corrallary 3.2
+f1 <- mhat_1 + A/prop_score * (Y - mhat_1)
+f0 <- mhat_0 + (1-A)/(1-prop_score) * (Y - mhat_0)
+std_err <- sqrt(var(f1 -f0)/nrow(df_nhefs))
+
+
+
+```
+
+
+:::{.callout-note title="Answer"}
+```{r}
+#| echo: FALSE
+tibble('psi_DR' = psi_DR,
+       'std_error' = std_err) %>% 
+    mutate('conf_interval' = paste0('(', sprintf('%0.3f', psi_DR - qnorm(0.975) * std_error), ', ', 
+                                  sprintf('%0.3f', psi_DR + qnorm(0.975) * std_error), ')'))
+  
+```
+
+We see that we get a similar standard error using the analytical formula in Nima's notes, but very slightly smaller than the bootstrapped variance in the previous problem. 
+:::
+
+
+
+
+
+
+## References
+
+::: {#refs}
+:::
+
