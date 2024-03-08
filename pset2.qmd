@@ -228,6 +228,8 @@ df_ate <-
 #| echo: false
 df_ate
 ```
+
+Note that in this part, we simply took the standard error from the saturated linear model used to estimate $\psi$. This is labeled as naive standard error because it doesn't account for the weights. I will correct that in part c).
 :::
 
 #### c)
@@ -404,9 +406,9 @@ We see that the variance of the doubly-robust is slightly smaller than that of t
 :::{.callout-note title="Answer"}
 $$
 \begin{aligned}
-\mathbb{E}\biggr[\frac{Y\mathbbm{1}(A = a, C = 0)}{P[A=a, C = 0~|~L]}\biggr] &= \sum_{\ell}\frac{\mathbb{E}[Y~|A = a, C = 0, L = \ell]}{P(A = a, C = 0~|~L)}Pr(A = a,  C = 0, L = \ell) \\
-&= \sum_{\ell}\frac{\mathbb{E}[Y~|A = a, C = 0, L = \ell]}{P(A = a, C = 0~|~L)}Pr(A = a, C = 0 ~|~ L = \ell)Pr(L = \ell) \\
-&=\sum_{\ell}\mathbb{E}[Y~|A = a, C = 0, L = \ell]Pr(L = \ell)
+\mathbb{E}\biggr[\frac{Y\mathbbm{1}(A = a)}{P[A=a~|~L]}\biggr] &= \sum_{\ell}\frac{\mathbb{E}[Y~|A = a, L = \ell]}{P(A = a~|~L)}Pr(A = a, L = \ell) \\
+&= \sum_{\ell}\frac{\mathbb{E}[Y~|A = a, L = \ell]}{P(A = a~|~L)}Pr(A = a ~|~ L = \ell)Pr(L = \ell) \\
+&=\sum_{\ell}\mathbb{E}[Y~|A = a, L = \ell]Pr(L = \ell)
 \end{aligned}
 $$
 :::
@@ -415,16 +417,14 @@ $$
 :::{.callout-note title="Answer"}
 $$
 \begin{aligned}
-\sum_{\ell}\mathbb{E}[Y~|~A = a, C = 0, L = \ell]Pr(L = \ell) &= \mathbb{E}\biggr[\mathbb{E}[Y~|A = a, C = 0, L = \ell]\biggr] \\
-&= \mathbb{E}\biggr[\mathbb{E}[Y^{a}~|~A = a, C = 0, L = \ell]\biggr]~~~\text{(Consitency)} \\
-&= \mathbb{E}\biggr[\mathbb{E}[Y^{a}~|~C = 0, L = \ell]\biggr]~~~\text{(Conditional Exchangability} 
-\\
-&~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\text{+ Positivity)} \\
-&= \mathbb{E}[Y^{a}~|~C = 0]~~~\text{Itterated expectation} \\
+\sum_{\ell}\mathbb{E}[Y~|~A = a, L = \ell]Pr(L = \ell) &= \mathbb{E}\biggr[\mathbb{E}[Y~|A = a, L = \ell]\biggr] \\
+&= \mathbb{E}\biggr[\mathbb{E}[Y^{a}~|~A = a, L = \ell]\biggr]~~~\text{(Consitency)} \\
+&= \mathbb{E}\biggr[\mathbb{E}[Y^{a}~|~L = \ell]\biggr]~~~\text{(Conditional Exchangability + Positivity)} \\
+&= \mathbb{E}[Y^{a}]~~~\text{Iterated expectation} \\
 \end{aligned}
 $$
 
-Thus, the standardized mean is equal to the mean counterfactual, among the uncensored. To get rid of the censoring we'd need an additional non-informative censoring assumption.
+Thus, the standardized mean is equal to the mean counterfactual outcome.
 :::
 
 ### 2.1.3
